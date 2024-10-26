@@ -7,10 +7,11 @@ const app= express();
 app.get('/',(req,res)=>{
     res.send('Hola')
 })
+app.use(json());
 
 app.use('/users',userRoutes)
 
-app.use(json());
+
 app.disable('x-powered-by')
 
 const PORT = process.env.PORT || 3004;
