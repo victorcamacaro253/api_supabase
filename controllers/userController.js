@@ -1,6 +1,11 @@
 import User from "../models/userModel.js";
 import redis from '../config/redisClient.js';
 import {hash,genSalt,compare} from 'bcrypt';
+import { validationResult } from "express-validator";
+import supabase from "../config/supabaseClient.js";
+import tokenService from "../services/tokenService.js";
+import {randomBytes} from 'crypto';
+
 
 class userController {
 
@@ -8,7 +13,7 @@ class userController {
 static getUsers = async (req,res)=>{
  try {
  
-   const cachedUsers= await redis.get('users')
+  const cachedUsers= await redis.get('users')
   if (cachedUsers) {
    console.log('Usarios  obtenidos mediante redis')
 
@@ -35,7 +40,14 @@ await redis.set('users',JSON.stringify(result),'EX',600)
 //-----------------------------------------------------------------------------------------
 
 static getUserById = async (req,res)=>{
+   
    const {id} = req.params
+
+  const errors= validationResult(req)
+  if (!errors.isEmpty()) {
+   return res.status(400).json({errors:errors.array()})
+   
+  }
    try {
 
       const cachedUser= await redis.get(`user:${id}`);
@@ -44,6 +56,7 @@ static getUserById = async (req,res)=>{
       console.log('Usuario obtenido mediante redis')
       return res.status(200).json(JSON.parse(cachedUser))
      } 
+
 
      //Si no hay cache se obtienen lo datos de supabase
       const  result = await User.getUserById(id);
@@ -105,20 +118,15 @@ static getUserByName= async(req,res)=>{
 
 static  addUser = async  (req, res) => {
 
-const {name, apellido, cedula, correo , contraseña}= req.body
+const {name, apellido, cedula, email , password}= req.body
 
+const errors = validationResult(req);
+if(!errors.isEmpty()){
+ return res.status(400).json({error:errors.array()})
+}
 
 
 try {
-
-   if (!name || !apellido || !correo || !contraseña) {
-      return res.status(400).json({ error: 'Nombre, apellido, correo y contraseña son requeridos' });
-   }
-   
-   if (contraseña.length < 7) {
-      return res.status(400).json({ error: 'La contraseña debe tener al menos 7 caracteres' });
-   }
-   
 
    const existingUser= await User.checkCedulaExists(cedula)
 
@@ -126,16 +134,19 @@ if(existingUser){
    return res.status(400).json({ error: 'El usuario ya existe' });
 }
 
-   const salt= await genSalt(10);
-   const hashedPassword=  await hash(contraseña,salt)
+   
 
 
-   const result= await User.addUser(name,apellido,cedula,correo,hashedPassword)
+   const result= await User.addUser(name,apellido,cedula,email,password)
 
    if(!result){
       return res.status(400).json({message:'Error al agregar usuario'})
    }
-   return res.status(201).json(result)
+
+    // Eliminar el caché global de usuarios para que se recargue con la lista actualizada.
+    await redis.del('users');
+
+   return res.status(201).json('usuario creado exitosamente')
    
 } catch (error) {
    console.log(error)
@@ -161,6 +172,11 @@ static deleteUser  = async (req, res) => {
        return res.status(404).json({ error: 'Usuario no encontrado' });
    }
 
+     // Eliminar el caché global y el específico del usuario eliminado.
+     await redis.del(`user:${id}`);
+     await redis.del('users');
+ 
+
    res.status(200).json({ message: 'Usuario eliminado exitosamente' });
 } catch (err) {
    console.error('Error ejecutando la consulta:', err);
@@ -170,8 +186,157 @@ static deleteUser  = async (req, res) => {
 
 }
 
+//--------------------------------------------------------------------------------
+static updateUser = async (req, res) => {
+   const { id } = req.params;
+   const { name, apellido, cedula, correo } = req.body;
+  
+   const errors = validationResult(req);
+   if (!errors.isEmpty()) {
+     return res.status(400).json({ errors: errors.array() });
+   }
 
+
+   try {
+
+  const existingUser= await User.checkCedulaExists(cedula)
+
+if(existingUser){
+   return res.status(400).json({ error: 'El usuario ya existe' });
+}
+
+
+    const updateFields={}
+    // Preparar los campos a actualizar
+    if (name) updateFields.nombre = name;
+    if (apellido) updateFields.apellido = apellido;
+    if (cedula) updateFields.cedula = cedula;
+    if (correo) updateFields.correo = correo;
+
+
+     const result = await User.updateUser(id,updateFields);
+    
+     if (result) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    // Invalidar caché del usuario específico y del listado general
+    await redis.del(`user:${id}`);
+    await redis.del('users');
+
+      res.status(200).json({ message: 'Usuario actualizado exitosamente' });
+      
+   } catch (error) {
+      console.log(error)
+
+      return  res.status(500).json({ message: error.message });
+
+   }
+   
 
 }
+
+
+//--------------------------------------------------------------------------
+
+
+ static loginSupabase= async  (req, res) => {
+ const  { email, password } = req.body;
+
+ try {
+
+   const result= await User.loginSupabase(email,password)
+
+   if (result) {
+      res.status(200).json({ message: 'Inicio de sesión exitoso', session: result });
+
+   }
+   
+ } catch (error) {
+   console.log(error)
+   return   res.status(500).json({ message: error.message });
+
+   
+ }
+ }
+
+ //---------------------------------------------------------------------------------------
+
+ static logoutSupabase = async (req, res) => {
+   try {
+       const { error } = await supabase.auth.signOut();
+
+       if (error) {
+           return res.status(400).json({ message: 'Error al cerrar sesión', error });
+       }
+
+       return res.status(200).json({ message: 'Sesión cerrada exitosamente' });
+   } catch (err) {
+       console.error(err);
+       return res.status(500).json({ message: 'Error interno del servidor', error: err.message });
+   }
+};
+
+ //---------------------------------------------------------------------------------------
+
+ static getSession = async (req,res)=>{
+   try {
+      const { data, error } = await supabase.auth.getSession();
+      if (error || !data.session) {
+        return res.status(401).json({ message: 'Sesión no válida o expirada' });
+      }
+
+   } catch (error) { 
+      console.log(error)
+      return res.status(500).json({ message: error.message });
+      
+   }
+ }
+
+//-------------------------------------------------------------------------------
+
+static login =async(req,res)=>{
+   const {email,password}= req.body
+
+   try {
+
+      const user= await User.findByEmail(email)
+      console.log(user.contraseña)
+
+      if(!user){
+         return res.status(404).json({ message: 'Usuario no encontrado' });
+      }
+
+      const match= await compare(password,user.contraseña)
+
+      if (!match) {
+         return res.status(401).json({ message: 'Credenciales inválidas'})
+         
+      }
+
+      const token = tokenService.generateToken(user.id,user.email)
+
+      const code= randomBytes(8).toString('hex')
+
+   await User.insertLoginRecord(user.id,code)
+
+   res.status(200).json({
+      message:'inicio de sesion existoso',
+      token:token,
+   })
+      
+   } catch (error) {
+      console.log(error)
+      return res.status(500).json({message: error.message})
+      
+   }
+
+    
+}
+
+}
+
+
+
 
 export default userController
