@@ -20,7 +20,33 @@ router.get('/name',
   router.get('/session', userController.getSession);
 
 
-router.get('/:id',
+  router.get('/dni',  
+    query('cedula').notEmpty().withMessage('La cedula es obligatorio'),
+    userController.getUserByCedula)
+
+    
+  router.get('/page',userController.getUsersWithPagination)
+
+ 
+//Ruta para obtener los usuarios filtrados
+router.get('/searchUser',[  
+    query('name').optional().notEmpty().withMessage('El nombre es obligatorio'),
+    query('apellido').optional().notEmpty().withMessage('El apellido es obligatorio'),
+    query('cedula').optional().notEmpty().withMessage('La cedula es obligatorio'),
+    query('email').isEmail().withMessage('El email es obligatorio'),
+    
+],userController.searchUsers);
+
+
+  router.get('/loginHistory/:id',
+        param('id').isInt().withMessage('El id tiene que ser un numero entero'),
+        validarErrores, //midleware para manerjar errores
+        userController.getLoginHistory )
+
+
+
+
+  router.get('/:id',
     param('id').isInt().withMessage('El ID debe ser un numero entero'),
     validarErrores, //midleware para manerjar errores
     userController.getUserById)
@@ -53,9 +79,7 @@ router.put('/:id',
         body('email').isEmail().withMessage('El correo no es valido'),
         body('password').isLength({min:7}).withMessage('La contraseña debe tener al menos 7 caracteres')
     ],
-        
-        
-        userController.loginSupabase)
+    userController.loginSupabase)
 
 
     router.post('/logoutSupabase',userController.logoutSupabase)
@@ -70,9 +94,8 @@ router.put('/:id',
     userController.login)
 
 
-    router.get('/dni',  
-        query('name').notEmpty().withMessage('El nombre es obligatorio'),
-        userController.getUserByCedula)
+
+  
 
 
 export default router;
