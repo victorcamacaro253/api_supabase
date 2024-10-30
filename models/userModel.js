@@ -38,10 +38,18 @@ return data
 }
 //-----------------------------------------------------------------------------------------------------
 
-static getUserByCedula = async (req,res)=>{
-    const {data,error}=await supabase.from('usuarios').select('*').eq('cedula')
-    if (error) throw new Error(error.message);
-    return data
+static getUserByCedula = async (cedula)=>{
+    const { data, error } = await supabase
+    .from('usuarios')
+    .select('*')
+    .eq('cedula', cedula)
+
+if (error && error.code !== 'PGRST116') {
+    // Handle any error that is not "not found"
+    throw new Error(error.message);
+}
+
+return data 
 
 }
 
@@ -169,11 +177,55 @@ static  updateUser = async (id, updateFields) => {
 
 
    }
+
+
+   //--------------------------------------------------------------------------------------------
+
+   static getLoginHistory= async  (userId)=>{
+    const { data, error } = await supabase
+    .from('historial_ingresos')
+    .select('*')
+    .eq('id_usuario', userId)
+    if(error) throw new Error (error.message)
+        return data
+
+
     
 }
 
+//----------------------------------------------------------------------------------------------
+
+ static getUsersWithPagination= async (limit,offset)=>{
+    const  { data, error,count } = await supabase
+    .from('usuarios')
+    .select('*',{count:'exact'})
+    .order('id',{ascending: true})
+    .range(offset,offset +limit-1)
+
+    if(error) throw new Error (error.message)
+        return data
+    
+
+ }
 
 
+//-----------------------------------------------------------------------------------------------------
+
+static  searchUsers = async (filters) => {
+    const { data, error } = await supabase
+    .from('usuarios')
+    .select('nombre,apellido,cedula,email')
+    .match(filters)
+    
+    if(error) throw new Error (error.message)
+        return data
+
+    
+    }
+
+
+
+}
 
 
 
