@@ -5,6 +5,8 @@ import { validationResult } from "express-validator";
 import supabase from "../config/supabaseClient.js";
 import tokenService from "../services/tokenService.js";
 import {randomBytes} from 'crypto';
+import { error } from "console";
+import { uuid } from "uuidv4";
 
 
 class userController {
@@ -460,6 +462,131 @@ static searchUsers= async  (req,res)=>{
 
 
 }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+
+static addMultipleUsers = async (req, res) => {
+    // Validar los resultados de la validación
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+
+   console.log('full body',req.body)
+   // Convierte users de string a objeto
+   let users;
+   if (typeof req.body.users === 'string') {
+      // Convierte users de string a objeto si viene de form-data
+      try {
+          users = JSON.parse(req.body.users || '[]');
+      } catch (error) {
+          return res.status(400).json({ error: 'Invalid JSON format for users' });
+      }
+  } else {
+      // Si ya es un array (JSON puro)
+      users = req.body.users || [];
+  }
+
+  const imagePath = req.files && req.files.length > 0 ? `/uploads/${req.files[0].filename}` : null;
+
+   console.log(users);
+
+   if (!Array.isArray(users)) {
+       return res.status(400).json({ error: 'Users must be an array' });
+   }
+
+   const errorsList = [];
+   const createdUsers = [];
+   const usersToInsert = [];
+   try {
+       
+
+       for (const user of users) {
+           const { name, apellido, cedula, email, password } = user;
+
+           if (!name || !apellido || !email || !password) {
+               errorsList.push({ error: 'Nombre, apellido, correo y contraseña son requeridos', user });
+               continue; // Cambiado para seguir insertando otros usuarios
+           }
+
+
+           const existingUser = await User.checkCedulaExists(cedula);
+
+           if (existingUser) {
+               errorsList.push({ error: 'El usuario ya existe', name });
+               continue; // Cambiado para seguir insertando otros usuarios
+           }
+
+           const hashedPassword = await hash(password, 10);
+
+           usersToInsert.push({
+               nombre:name,
+               apellido,
+               cedula,
+               email,
+              contraseña: hashedPassword,
+              imagen:imagePath
+               
+           });
+       }
+
+       if (usersToInsert.length > 0) {
+           // Llama a la función de inserción de múltiples usuarios en el modelo
+           const result = await User.addMultipleUsers(usersToInsert);
+           createdUsers.push(...usersToInsert.map(user => ({ name: user.nombre }))); // Solo agregar nombres
+       }
+
+
+        // Eliminar datos existentes en Redis antes de insertar nuevos
+        await redis.del('users'); // Eliminar clave existente
+
+       if (errorsList.length > 0) {
+           res.status(400).json({ errorsList });
+       } else {
+           res.status(201).json({ createdUsers });
+       }
+
+   } catch (error) {
+       console.error('Error ejecutando la consulta:', error);
+       res.status(500).json({ error: 'Error interno del servidor' });
+   }
+}
+
+//------------------------------------------------------------------------
+// Función para obtener todos los usuarios
+
+ static deleteMultipleUsers= async (req,res)=>{
+   const {users}= req.body
+
+  if (!Array.isArray(users)) {
+   return res.status(400).json({error:'user debe ser un arreglo'})
+   }
+
+   try {
+      const deletePromises = users.map(user=>{
+         const {id}= user
+         return User.deleteUser(id)
+
+
+      })
+
+      await  Promise.all(deletePromises)
+
+       // Opcional: Eliminar datos de usuarios en Redis
+       await redis.del('users'); // Eliminar la clave de usuarios
+
+       const remainingUsers = await User.getUsers(); // Suponiendo que tienes una función para obtener todos los usuarios
+       await redis.setEx('users', 3600, JSON.stringify(remainingUsers));
+
+      res.status(200).json({message:'Usuarios eliminados exitosamente'})
+   } catch (error) {
+      console.log(error)
+      return res.status(500).json({message: error.message})
+      
+   }
+
+ }
 
 
 }
