@@ -223,7 +223,18 @@ static  searchUsers = async (filters) => {
     
     }
 
+//------------------------------------------------------------
 
+static addMultipleUsers= async (users)=>{
+    const {data,error}= await supabase
+    .from('usuarios')
+    .insert(users)
+
+    if (error) throw new Error('Error al insertar usuarios en Supabase: ' + error.message);
+
+        return data;
+    
+}
 
 }
 
