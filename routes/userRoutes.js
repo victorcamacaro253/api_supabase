@@ -1,8 +1,8 @@
 import { Router } from "express";
 import userController from "../controllers/userController.js";
-import {body,param,query,validationResult} from  "express-validator";
+import {body,check,param,query,validationResult} from  "express-validator";
 import validarErrores from "../middleware/validarErrores.js";
-
+import upload from "../middleware/multerConfig.js";
 
 const router= Router();
 
@@ -95,6 +95,19 @@ router.put('/:id',
 
 
 
+    router.post('/addMultipleUsers',
+        [
+            check('users').isArray().withMessage('Users must be an array'),
+            check('users.*.name').notEmpty().withMessage('Name  es requerido'),
+            check('users.*.apellido').notEmpty().withMessage('Apellido es requerido'),
+            check('users.*.cedula').notEmpty().withMessage('Cedula es requerido'),
+            check('users.*.email').isEmail().withMessage('Invalido formato de email'),
+            check('users.*.password').isLength({ min:7 }).withMessage('Password debe ser al menos 7  caracteres')
+
+        ]
+        ,upload.array('image'),userController.addMultipleUsers)
+
+    router.post('/delete',userController.deleteMultipleUsers)
   
 
 
