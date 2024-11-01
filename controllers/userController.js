@@ -7,6 +7,7 @@ import tokenService from "../services/tokenService.js";
 import {randomBytes} from 'crypto';
 import { error } from "console";
 import { v4 as uuidv4 } from 'uuid';
+import uploadImageSupabase from '../middleware/uploadSupabase.js'
 
 class userController {
 
@@ -518,27 +519,13 @@ static addMultipleUsers = async (req, res) => {
            }
 
 
-                 // Subir la imagen a Supabase Storage
-                 const imageFile = req.files[0]; // Asumiendo que estás subiendo una sola imagen por usuario
-                 let imagePath = null;
-     
-                 if (imageFile) {
-                  const { data, error: uploadError } = await supabase
-                      .storage
-                      .from('uploads') // Nombre del bucket
-                      .upload(`uploads/${imageFile.originalname}`, imageFile.buffer, {
-                          cacheControl: '3600',
-                          upsert: false,
-                      });
-  
-                  if (uploadError) {
-                      console.error('Error al subir la imagen:', uploadError);
-                      return res.status(500).json({ error: 'Error al subir la imagen' });
-                  }
-  
-                  // Obtener la URL de la imagen subida
-                  imagePath = data.Key; // o `data.path` dependiendo de cómo esté configurado tu bucket
-              }
+
+              
+              const imageFile=  req.files[0];
+              console.log(imageFile)
+              const imagePath= await uploadImageSupabase(imageFile)
+
+console.log(imagePath)
 
            const uuid= uuidv4();
 
@@ -556,6 +543,9 @@ static addMultipleUsers = async (req, res) => {
                
            });
        }
+
+
+       
 
        if (usersToInsert.length > 0) {
            // Llama a la función de inserción de múltiples usuarios en el modelo
