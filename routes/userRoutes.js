@@ -1,114 +1,75 @@
-import { Router } from "express";
-import userController from "../controllers/userController.js";
-import {body,check,param,query,validationResult} from  "express-validator";
-import validarErrores from "../middleware/validarErrores.js";
-import upload from "../middleware/multerConfig.js";
+import { Router } from 'express';
+import userController from '../controllers/userController.js';
+import authenticateToken from '../middleware/authenticationToken.js';
+import upload from '../middleware/multerConfig.js';
+import checkPermissions from '../middleware/checkPermission.js';
 
-const router= Router();
+const router = Router();
 
+//Ruta para obtener los datos de la base de datos
 
-
-router.get('/',userController.getUsers)
-
-
-router.get('/name',
-    query('name').notEmpty().withMessage('El nombre es obligatorio'),
-    userController.getUserByName)
-
-    
- // Ruta para obtener la sesión activa
-  router.get('/session', userController.getSession);
+//Ruta para obtener todos los usuarios de la base de datos
+router.get('/',userController.getAllUser);
 
 
-  router.get('/dni',  
-    query('cedula').notEmpty().withMessage('La cedula es obligatorio'),
-    userController.getUserByCedula)
-
-    
-  router.get('/page',userController.getUsersWithPagination)
-
- 
 //Ruta para obtener los usuarios filtrados
-router.get('/searchUser',[  
-    query('name').optional().notEmpty().withMessage('El nombre es obligatorio'),
-    query('apellido').optional().notEmpty().withMessage('El apellido es obligatorio'),
-    query('cedula').optional().notEmpty().withMessage('La cedula es obligatorio'),
-    query('email').isEmail().withMessage('El email es obligatorio'),
-    
-],userController.searchUsers);
+router.get('/searchUser',userController.searchUsers);
 
-
-  router.get('/loginHistory/:id',
-        param('id').isInt().withMessage('El id tiene que ser un numero entero'),
-        validarErrores, //midleware para manerjar errores
-        userController.getLoginHistory )
+//Ruta para obtener el perfi de los usuarios
+router.get('/getperfil',authenticateToken,checkPermissions('read') ,userController.getPerfil)
 
 
 
-
-  router.get('/:id',
-    param('id').isInt().withMessage('El ID debe ser un numero entero'),
-    validarErrores, //midleware para manerjar errores
-    userController.getUserById)
+//Ruta para obtener el historial de ingresos del usuario por el nombre
+router.get('/loginHistorial',userController.getLoginHistory)
 
 
 
-router.post('/add',
-    [body('name').notEmpty().withMessage('El nombre es obligatorio'),
-    body('apellido').notEmpty().withMessage('El apellido es obligatorio'),
-    body('email').isEmail().withMessage('El email no es valido'),
-    body('password').isLength({min:7}).withMessage('La contraseña debe tener al menos 7 caracteres')],
-    userController.addUser)
-
-router.delete('/:id',
-[param('id').isInt().withMessage('El ID debe ser un número entero')],
-userController.deleteUser)
-
-router.put('/:id',
-    [
-        param('id').isInt().withMessage('El ID debe ser un número entero'),
-        body('name').optional().notEmpty().withMessage('El nombre no puede estar vacío'),
-        body('apellido').optional().notEmpty().withMessage('El apellido no puede estar vacío'),
-        body('email').optional().isEmail().withMessage('Correo no válido'),
-    ]
-    ,userController.updateUser)
-
-// Login usando el metodo de autneticacion de supabase
-    router.post('/loginSupabase',[
-
-        body('email').isEmail().withMessage('El correo no es valido'),
-        body('password').isLength({min:7}).withMessage('La contraseña debe tener al menos 7 caracteres')
-    ],
-    userController.loginSupabase)
+//Ruta para obtener el perfil del usuario
+router.get('/getUserPerfil/:id',authenticateToken ,userController.getUserPerfil)
 
 
-    router.post('/logoutSupabase',userController.logoutSupabase)
+//Ruta para obtener los usarios con paginacion
+router.get('/pagination',userController.getUsersWithPagination)
 
 
-    //Logins normal usando los datos en la base de datos en supabase
-    router.post('/login',[
+//Ruta para agregar un nuevo usuario
 
-        body('email').isEmail().withMessage('El correo no es valido'),
-        body('password').isLength({min:7}).withMessage('La contraseña debe tener al menos 7 caracteres')
-    ],
-    userController.login)
+router.post('/',authenticateToken,userController.addUser);
+
+//Ruta para logearse
+
+router.post('/login', userController.loginUser);
 
 
+//Ruta para obetenr un usuario por id
 
-    router.post('/addMultipleUsers',
-        [
-            check('users').isArray().withMessage('Users must be an array'),
-            check('users.*.name').notEmpty().withMessage('Name  es requerido'),
-            check('users.*.apellido').notEmpty().withMessage('Apellido es requerido'),
-            check('users.*.cedula').notEmpty().withMessage('Cedula es requerido'),
-            check('users.*.email').isEmail().withMessage('Invalido formato de email'),
-            check('users.*.password').isLength({ min:7 }).withMessage('Password debe ser al menos 7  caracteres')
+router.get('/:id',userController.getUserById);
 
-        ]
-        ,upload.array('image'),userController.addMultipleUsers)
 
-    router.post('/delete',userController.deleteMultipleUsers)
-  
+//Ruta para insertar multiples usuarios
+router.post('/addMultipleUsers',userController.addMultipleUsers)
+
+//Ruta para eliminar multiple usuarios
+router.post('/deleteMultipleUsers',userController.deleteMultipleUsers)
+
+//Ruta para solicitar el password reset
+router.post('/requestPasswordRequest',userController.requestPasswordReset)
+
+//Ruta para resetear el password
+router.post('/resetPassword/:token',userController.resetPassword)
+
+//Ruta para actualizar un usuario
+
+router.put('/:id', userController.updateUser);
+
+//Ruta para eliminar un producto
+
+router.delete('/:id', userController.deleteUser);
+
+//Ruta para actualizar un producto parcial
+
+router.patch('/:id', userController.partialUpdateUser)
 
 
 export default router;
