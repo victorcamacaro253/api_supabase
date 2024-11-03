@@ -192,7 +192,7 @@ static deleteUser  = async (req, res) => {
 //--------------------------------------------------------------------------------
 static updateUser = async (req, res) => {
    const { id } = req.params;
-   const { name, apellido, cedula, correo } = req.body;
+   const { name, apellido, cedula, email } = req.body;
   
    const errors = validationResult(req);
    if (!errors.isEmpty()) {
