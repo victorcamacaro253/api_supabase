@@ -15,7 +15,7 @@ class userController {
 static getUsers = async (req,res)=>{
  try {
  
-  const cachedUsers= await redis.get('users')
+ const cachedUsers= await redis.get('users')
   if (cachedUsers) {
    console.log('Usarios  obtenidos mediante redis')
 
@@ -30,7 +30,7 @@ await redis.set('users',JSON.stringify(result),'EX',600)
 
 
 
-    res.json(result)
+    res.status(200).json(result)
  } catch (error) {
     res.status(500).json({ message: error.message });
     

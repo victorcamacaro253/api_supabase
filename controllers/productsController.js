@@ -1,7 +1,10 @@
 import productsModel from  '../models/productsModel.js';
 import uploadImageSupabase from '../middleware/uploadSupabase.js';
 import { randomBytes } from 'crypto';
+import crypto from 'crypto'
 import { validationResult } from "express-validator";
+import fs from 'fs'
+import csvParser from 'csv-parser';
 
 
 
@@ -185,12 +188,18 @@ static getProductsById = async (req,res) =>{
         const {min,max}=req.query;
         try{
             const products = await productsModel.getProductByPriceRange(min,max)
+
+            if(products.length=== 0){
+                return res.status(404).json({message:'No hay productos en ese rango de precio'})
+            }
             res.status(200).json(products)
             }catch(error){
                 console.error(error);
                 res.status(500).json({message: "Error obteniendo productos por rango de precio"});
-                    }
-                    }
+                  
+               }
+
+            }
 
                 
     //------------------------------------------------------------------------------------------------------------------
@@ -216,15 +225,17 @@ static getProductsById = async (req,res) =>{
         if (typeof req.body.products === 'string') {
             // Convierte users de string a objeto si viene de form-data
             try {
-                users = JSON.parse(req.body.products || '[]');
+                products = JSON.parse(req.body.products || '[]');
             } catch (error) {
                 return res.status(400).json({ error: 'Invalid JSON format for users' });
             }
         } else {
             // Si ya es un array (JSON puro)
-            users = req.body.products || [];
+            products = req.body.products || [];
         }
-      
+
+
+    //  console.log(products)
        
   // const imagePath = req.files &&  req.files.length > 0 ? req.files[0].path : '';
 
@@ -249,10 +260,10 @@ try {
       }
 
       const imageFile=  req.files[0];
-      console.log(imageFile)
+   //   console.log(imageFile)
       const imagePath= await uploadImageSupabase(imageFile)
 
-console.log(imagePath)
+    console.log(imagePath)
 
 
       const codigo = crypto.randomBytes(4).toString('hex').toUpperCase();
@@ -274,19 +285,23 @@ console.log(imagePath)
       })
 
 
-            }
+        }
 
 
-            if(productsToInsert > 0){
+           // console.log(productsToInsert)
+
+            
                 const result= await productsModel.addMultipleProducts(productsToInsert);
+
+               
                 createdProducts.push(productsToInsert)
-              }
+              
 
               
        if (errorsList.length > 0) {
         res.status(400).json({ errorsList });
     } else {
-        res.status(201).json({ createdUsers });
+        res.status(201).json({ createdProducts });
     }
           
 } catch (error) {
@@ -298,7 +313,74 @@ console.log(imagePath)
 
     }
 
+//------------------------------------------------------------------------------
+
+  static getTopSelling= async (req, res) => {
+    try {
+        const results= await productsModel.getTopSellingProducts();
+        res.json(results)
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error al obtener los productos más vendidos'})
+        
+    }
+  }
+
+  //---------------------------------------------------------------------------------------------------
+
+  static importProduct = async  (req, res) => {
+    const filePath= req.file.path
+    const products= []
+
+    try {
+        const readStream= fs.createReadStream(filePath);
+        const parseStream = readStream.pipe(csvParser())
+
+     parseStream.on('data',async (row)=>{
+
      
+
+        products.push({
+            codigo: row.codigo,
+            nombre_producto: row.nombre_producto,
+            descripcion: row.descripcion,
+            precio: parseFloat(row.precio),
+            stock:parseInt(row.stock),
+            id_categoria: parseInt(row.id_categoria),
+            estatus:row.estatus,
+            id_proveedor: parseInt(row.id_proveedor),
+            imagen:row.imagen
+        })
+
+     })
+
+     console.log(products)
+
+     await new Promise ((resolve,reject)=>{
+        parseStream.on('end',resolve)
+        parseStream.on('error',reject)
+     })
+
+
+     const count = await  productsModel.addMultipleProducts(products)
+
+     fs.unlinkSync(filePath)
+
+     return res.json({message:'Productos Importados Exitosamente',count})
+
+
+    } catch (error) {
+        console.log('Error al procesar el archivo  o importar prodcutos',error)
+
+        if(fs.existsSync(filePath)){
+            fs.unlinkSync(filePath)
+        }
+        return  res.status(500).json({message:'Error al importar productos',error})
+
+    }
+
+
+}
 
 }
 
