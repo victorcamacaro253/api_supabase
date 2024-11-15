@@ -13,6 +13,8 @@ router.get('/name',
     productsController.getProductByName)
 
     
+router.get('/productStock/:id',productsController.getProductStock)
+    
 
      //Ruta para obtener los productos por un rango de precio
      router.get('/price',
@@ -24,6 +26,8 @@ router.get('/name',
  //Ruta para obtener los productos mas vendidos
 
 router.get('/topSelling',productsController.getTopSelling)
+
+
 
 
 router.get('/:id',

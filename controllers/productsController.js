@@ -382,6 +382,31 @@ try {
 
 }
 
+//----------------------------------------------------------------------------------------------
+//  Funcion para obtener el stock del producto
+static getProductStock= async (req,res)=>{
+    const {id} = req.params
+    try {
+        
+
+        const stock = await productsModel.getProductStock(id)
+console.log(stock)
+        if(!stock){
+            return res.status(404).json({message:'Producto no encontrado'})
+        }
+
+
+        return res.json(stock)
+        } catch (error) {
+            console.log(error)
+            return res.status(500).json({message:'Error al obtener el stock del producto',error
+              
+            })
+            
+        }
+        
+    }
+
 }
 
 
