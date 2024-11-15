@@ -241,6 +241,51 @@ return data
 }
 
 
+static getProductStock = async (id)=>{
+  
+  const {data, error} = await supabase
+  .from('productos')
+  .select('stock')
+  .eq('id_producto', id);
+  if (error) {
+    console.error('Error fetching product stock:', error);
+    return null;
+    }
+    return data
+    
+}
+
+static updateTopSelling = async (id, cantidad) => {
+  const { data, error } = await supabase
+      .from('productos')
+      .update({ vendido: supabase.rpc('incrementar_vendido', { id_producto: id, cantidad }) }) // Llamar a una función RPC
+      .eq('id_producto', id);
+
+  if (error) {
+      console.error('Error updating top-selling product:', error);
+      return null;
+  }
+
+  return data; // Retorna los datos actualizados
+}
+
+
+static updateProductStock = async (id, stock)=>{
+  const {data, error} = await supabase
+  .from('productos')
+  .update({stock: stock})
+  .eq('id_producto', id);
+  if (error) {
+    console.error('Error updating product stock:', error);
+    return null;
+    }
+    return data
+  }
+
+
+
+
+
 }
 
 
