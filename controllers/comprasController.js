@@ -154,65 +154,48 @@ class comprasController {
                             const { id_producto, cantidad } = producto;
                 
                             // Obtener stock del producto
-                         const stock = await productsModel.getProductStock(id_producto)
-                         console.log(stock)
-                         console.log(cantidad)
+                         const stockResponse = await productsModel.getProductStock(id_producto)
+                       
+                         const stock = stockResponse[0].stock; // Accede al valor del stock
 
-                            if (stock < cantidad) {
+                       
+
+                            if(stock < cantidad) {
                                 return res.status(400).json({ error: 'Stock insuficiente para el producto con id ' + id_producto });
                             }
                 
                             insertProductos.push(producto);
                         }
                 
-                        // Insertar la compra
-                       /* const { data: compraData, error: compraError } = await supabase
-                            .from('compras')
-                            .insert([{ id_usuario, totalCompra }])
-                            .select('id_compra')
-                            .single();
-                
-                        if (compraError) {
-                            throw new Error('Error al insertar la compra: ' + compraError.message);
-                        }
-                            
-                
-                        const id_compra = compraData.id_compra;
-                        */
                        const id_compra = await Compras.addCompra(id_usuario,totalCompra)
                 
-console.log('id_compras:',id_compra)
+                    console.log('id_compras:',id_compra)
                     await Compras.compraProduct(id_compra,insertProductos)
                 
                         // Actualizar el stock del producto
                         for (const producto of insertProductos) {
                             const { id_producto, cantidad } = producto;
                 
-                            // Actualizar stock
-                            const { data: stockData, error: updateError } = await supabase
-                                .from('productos')
-                                .select('stock')
-                                .eq('id_producto', id_producto)
-                                .single();
-                
-                            if (updateError) {
-                                throw new Error('Error al obtener el stock: ' + updateError.message);
-                            }
+                         
+                            const stockResponse = await productsModel.getProductStock(id_producto)
+                       
+                            const stockData = stockResponse[0].stock; // Accede al valor del stock
                 console.log('nuevo',stockData)
-                            const newStock = stockData.stock - cantidad;
+                            const newStock = stockData - cantidad;
                 
-                            // Actualizar el stock en la base de datos
-                            const { error: updateStockError } = await supabase
-                                .from('productos')
-                                .update({ stock: newStock })
-                                .eq('id_producto', id_producto);
-                
-                            if (updateStockError) {
-                                throw new Error('Error al actualizar el stock: ' + updateStockError.message);
-                            }
-                
+
+                            const updateProductStock= await productsModel.updateProductStock(id_producto,newStock)
+                            console.log(updateProductStock)
+                          
+                           
+                const vendido= await productsModel.getTopSellingProductById(id_producto)
+
+                console.log('vendido',vendido)
+
+                 const newVendido = vendido.vendido + cantidad
+                 console.log('new Vendido',newVendido)
                             // Actualizar productos más vendidos
-                            await productsModel.updateTopSelling(id_producto, cantidad);
+                            await productsModel.updateTopSelling(id_producto, newVendido);
                         }
                 
                         res.status(201).json({ id_compra, message: 'Compra realizada con éxito' });
