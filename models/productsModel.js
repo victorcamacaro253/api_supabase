@@ -240,6 +240,25 @@ return data
 
 }
 
+//-----------------------------------------------------------
+
+static getTopSellingProductById = async (id)=>{
+  const {data , error} = await supabase
+  .from('productos')
+  .select(' vendido')
+  .eq('id_producto',id)
+  .single()
+
+  if (error) {
+    console.error('Error fetching top-selling products:', error);
+    return null;  
+}
+
+return data
+
+}
+
+
 
 static getProductStock = async (id)=>{
   
@@ -254,11 +273,12 @@ static getProductStock = async (id)=>{
     return data
     
 }
+//----------------------------------------------------------------------
 
 static updateTopSelling = async (id, cantidad) => {
   const { data, error } = await supabase
       .from('productos')
-      .update({ vendido: supabase.rpc('incrementar_vendido', { id_producto: id, cantidad }) }) // Llamar a una función RPC
+      .update({ vendido: cantidad }) // Llamar a una función RPC
       .eq('id_producto', id);
 
   if (error) {
@@ -269,6 +289,7 @@ static updateTopSelling = async (id, cantidad) => {
   return data; // Retorna los datos actualizados
 }
 
+//--------------------------------------------------------------------------
 
 static updateProductStock = async (id, stock)=>{
   const {data, error} = await supabase
