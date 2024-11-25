@@ -207,5 +207,46 @@ class comprasController {
                     }
                 };
 
+
+                static getComprasByUserId = async (req, res) => {
+                    const {id} = req.params
+
+                    try {
+
+                        const result = await Compras.getComprasByUserId(id)
+
+                        if (result.length === 0) {
+                            res.status(404).json({ message: 'No se encontraron compras para el usuario'})
+                            
+                        }
+
+                        res.json(result)
+                        
+                    } catch (error) {
+                        console.error('Error:', error);
+                        res.status(500).json({ error: 'Error interno del servidor' });
+
+                        
+                    }
+
+                }
+
+
+                static getComprasCountByUsuario = async (req,res)=>{
+                    try {
+                        const result = await Compras.getComprasCountByUsuario()
+                        
+                        if(!result){
+                            res.status(404).json({message:'No se encontraron compras para el usuario'})
+                        }
+                        res.json(result)
+                        
+                    } catch (error) {
+                        console.error('Error:', error);
+                        res.status(500).json({ error: 'Error interno del servidor' });
+                        
+                    }
+                }
+
 }
 export default comprasController 
