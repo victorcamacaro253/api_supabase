@@ -105,18 +105,7 @@ class Compras {
     }
 
 
-    static updateProductStock= async (id_producto,cantidad)=>{
-        const { data, error } = await supabase
-        .from('productos')
-        .update({stock: cantidad})
-        .eq('id_producto',id_producto)
-        if (error) {
-            console.error('Error updating data:', error);
-            return null; // Manejo de errores
-            }
-            return data;
-            }
-
+   
 
             // Agregar productos a la compra
 static  compraProduct=async  (id_compra, productos)=> {
@@ -138,6 +127,59 @@ static  compraProduct=async  (id_compra, productos)=> {
     return data; // Devuelve los datos insertados si es necesario
 }
 
+static getComprasByUserId = async (id_usuario) => {
+    const { data, error } = await supabase
+        .from('compras')
+        .select(`
+            id_compra,
+            fecha,
+            total_compra,
+            productos_compras (
+                id_producto,
+                cantidad,
+                precio,
+                productos (
+                    nombre_producto
+                )
+            )
+        `)
+        .eq('id_usuario', id_usuario)
+        .order('fecha', { ascending: true });
+
+    if (error) {
+        console.error('Error fetching data:', error);
+        return null; // Manejo de errores
+    }
+
+    return data; // Devuelve un arreglo de compras con productos
+}
+
+
+static async getComprasCountByUsuario() {
+    const { data, error } = await supabase
+        .from('usuarios') // Nombre de la tabla de usuarios
+        .select(`
+            id,
+            nombre,
+            compras (
+                id_compra
+            )
+        `);
+
+    if (error) {
+        console.error('Error obteniendo el conteo de compras por usuario:', error);
+        throw error; // Lanza el error para manejarlo en el controlador
+    }
+
+    // Procesar los datos para contar las compras
+    const result = data.map(usuario => ({
+        id: usuario.id,
+        nombre: usuario.nombre,
+        cantidad_compras: usuario.compras.length // Contar las compras
+    }));
+
+    return result;
+}
 
 }
 
