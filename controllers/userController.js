@@ -44,7 +44,7 @@ await redis.set('users',JSON.stringify(result),'EX',600)
 static getUserById = async (req,res)=>{
    
    const {id} = req.params
-
+console.log('victor',id)
   const errors= validationResult(req)
   if (!errors.isEmpty()) {
    return res.status(400).json({errors:errors.array()})
@@ -62,7 +62,7 @@ static getUserById = async (req,res)=>{
 
      //Si no hay cache se obtienen lo datos de supabase
       const  result = await User.getUserById(id);
-      console.log('usuarios obtenidos por supabase')
+      console.log('usuarios obtenidos por supabase',result)
       
 
       if (!result) {
@@ -84,7 +84,7 @@ static getUserById = async (req,res)=>{
 
 
 static getUserByName= async(req,res)=>{
-   const {name} =  req.query
+   const {name} =  req.params
    try {
 
     const cachedUser = await redis.get(`user:name${name}`);
@@ -449,6 +449,11 @@ static searchUsers= async  (req,res)=>{
     }
 
       const users = await User.searchUsers(fields);
+
+      if (users.length===0) {
+         return res.status(404).json({ message: 'No se encontraron usuarios' });
+         
+      }
 
      // Almacena los resultados en Redis por un tiempo determinado (ej. 1 hora)
      await redis.set(cacheKey, JSON.stringify(users), 'EX', 3600);
