@@ -11,15 +11,6 @@ const router= Router();
 router.get('/',userController.getUsers)
 
 
-router.get('/name',
-    query('name').notEmpty().withMessage('El nombre es obligatorio'),
-    userController.getUserByName)
-
-    
- // Ruta para obtener la sesión activa
-  router.get('/session', userController.getSession);
-
-
   router.get('/dni',  
     query('cedula').notEmpty().withMessage('La cedula es obligatorio'),
     userController.getUserByCedula)
@@ -43,13 +34,17 @@ router.get('/searchUser',[
         validarErrores, //midleware para manerjar errores
         userController.getLoginHistory )
 
-
-
-
+        
   router.get('/:id',
     param('id').isInt().withMessage('El ID debe ser un numero entero'),
     validarErrores, //midleware para manerjar errores
     userController.getUserById)
+
+
+        router.get('/name/:name',
+            param('name').notEmpty().withMessage('El nombre es obligatorio'),
+            userController.getUserByName)
+        
 
 
 
@@ -73,25 +68,8 @@ router.put('/:id',
     ]
     ,userController.updateUser)
 
-// Login usando el metodo de autneticacion de supabase
-    router.post('/loginSupabase',[
-
-        body('email').isEmail().withMessage('El correo no es valido'),
-        body('password').isLength({min:7}).withMessage('La contraseña debe tener al menos 7 caracteres')
-    ],
-    userController.loginSupabase)
 
 
-    router.post('/logoutSupabase',userController.logoutSupabase)
-
-
-    //Logins normal usando los datos en la base de datos en supabase
-    router.post('/login',[
-
-        body('email').isEmail().withMessage('El correo no es valido'),
-        body('password').isLength({min:7}).withMessage('La contraseña debe tener al menos 7 caracteres')
-    ],
-    userController.login)
 
 
 
