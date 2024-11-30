@@ -2,42 +2,45 @@ import User from "../models/userModel.js";
 import redis from '../config/redisClient.js';
 import {hash,genSalt,compare} from 'bcrypt';
 import { validationResult } from "express-validator";
-import supabase from "../config/supabaseClient.js";
-import tokenService from "../services/tokenService.js";
-import {randomBytes} from 'crypto';
-import { error } from "console";
 import { v4 as uuidv4 } from 'uuid';
 import uploadImageSupabase from '../middleware/uploadSupabase.js'
+import notificationService from "../services/notificationService.js";
+import handleError from "../utils/handleError.js";
+import hashPassword from "../utils/hashPassword.js";
+import cacheService from "../services/cacheService.js";
+
 
 class userController {
 
 
 static getUsers = async (req,res)=>{
  try {
- 
- const cachedUsers= await redis.get('users')
+ const cachedUsers = await cacheService.getFromCache('users')
+ //const cachedUsers= await redis.get('users')
   if (cachedUsers) {
-   console.log('Usarios  obtenidos mediante redis')
-
- return  res.json(JSON.parse(cachedUsers))
+   console.log('Usarios obtenidos mediante redis')
+notificationService.notify('Hola victor')
+ return  res.json(cachedUsers)
   }
 
 
     const result= await User.getUsers();
 console.log('usuarios obtenidos por supabase')
 
-await redis.set('users',JSON.stringify(result),'EX',600)
+//await redis.set('users',JSON.stringify(result),'EX',600)
 
+await cacheService.setToCache('users',result)
 
-
-    res.status(200).json(result)
+    res.status(200).json(result) 
  } catch (error) {
-    res.status(500).json({ message: error.message });
+   handleError(res,error)    
     
  }
 
 
 }
+
+
 
 //-----------------------------------------------------------------------------------------
 
@@ -52,11 +55,13 @@ console.log('victor',id)
   }
    try {
 
-      const cachedUser= await redis.get(`user:${id}`);
+      const cachedUser = await cacheService.getFromCache(`user:${id}`);
+
+     // const cachedUser= await redis.get(`user:${id}`);
 
      if(cachedUser){
       console.log('Usuario obtenido mediante redis')
-      return res.status(200).json(JSON.parse(cachedUser))
+      return res.status(200).json(cachedUser)
      } 
 
 
@@ -69,14 +74,17 @@ console.log('victor',id)
          return res.status(404).json({ message: 'Usuario no encontrado' });
        }
 
-       await redis.set(`user:${id}`,JSON.stringify(result),'EX',600);
+      // await redis.set(`user:${id}`,JSON.stringify(result),'EX',600);
+
+      await cacheService.setToCache(`user:${id}`, result);
+
 
       res.status(200).json(result)
 
       
    } catch (error) {
-      res.status(500).json({ message: error.message });
-      console.log(error)
+      handleError(res,error)    
+
    }
 }
 
@@ -87,7 +95,9 @@ static getUserByName= async(req,res)=>{
    const {name} =  req.params
    try {
 
-    const cachedUser = await redis.get(`user:name${name}`);
+   // const cachedUser = await redis.get(`user:name${name}`);
+   const cachedUser = await cacheService.getFromCache(`user:name:${name}`);
+
 
     if(cachedUser){
       console.log(`Usuario ${name} obtenido del cache`);
@@ -102,15 +112,17 @@ static getUserByName= async(req,res)=>{
     }
       console.log(`Dato obtenido de redis`)
 
-      await redis.set(`user:name:${name}`,JSON.stringify(result),'EX',600)
+     // await redis.set(`user:name:${name}`,JSON.stringify(result),'EX',600)
+     await cacheService.setToCache(`user:name:${name}`, result);
+
      console.log(`Usuario ${name} guardado en cache`)
 
 
      return res.json(result) 
-      } catch (error) {
-         res.status(500).json({ message: error.message });
 
-         console.log(error)
+      } catch (error) {
+         handleError(res,error)    
+
          }
 
 }
@@ -136,8 +148,7 @@ if(existingUser){
    return res.status(400).json({ error: 'El usuario ya existe' });
 }
 
-   const hashedpassword=  await hash(password, 10)
-
+   const hashedpassword=  await hashPassword(password)
 
 
    const result= await User.addUser(name,apellido,cedula,email,hashedpassword)
@@ -147,13 +158,16 @@ if(existingUser){
    }
 
     // Eliminar el caché global de usuarios para que se recargue con la lista actualizada.
-    await redis.del('users');
+   // await redis.del('users');
+   await cacheService.deleteFromCache('users');
+
+
 
    return res.status(201).json('usuario creado exitosamente')
    
 } catch (error) {
-   console.log(error)
-   res.status(500).json({ message: error.message });
+   handleError(res,error)    
+   
 
    
 }
@@ -176,14 +190,17 @@ static deleteUser  = async (req, res) => {
    }
 
      // Eliminar el caché global y el específico del usuario eliminado.
-     await redis.del(`user:${id}`);
-     await redis.del('users');
+    // await redis.del(`user:${id}`);
+    // await redis.del('users');
+    await cacheService.deleteFromCache(`user:${id}`);
+    await cacheService.deleteFromCache('users');
+
  
 
    res.status(200).json({ message: 'Usuario eliminado exitosamente' });
-} catch (err) {
-   console.error('Error ejecutando la consulta:', err);
-   res.status(500).json({ error: 'Error interno del servidor' });
+} catch (error) {
+   handleError(res,error)    
+
 }
 
 
@@ -191,151 +208,45 @@ static deleteUser  = async (req, res) => {
 
 //--------------------------------------------------------------------------------
 static updateUser = async (req, res) => {
-   const { id } = req.params;
-   const { name, apellido, cedula, email } = req.body;
-  
-   const errors = validationResult(req);
-   if (!errors.isEmpty()) {
-     return res.status(400).json({ errors: errors.array() });
-   }
+  const { id } = req.params;
+  const { name, apellido, cedula, email } = req.body;
 
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
 
-   try {
+  try {
+    const existingUser = await User.checkCedulaExists(cedula);
+    if (existingUser && existingUser.id !== id) {
+      return res.status(400).json({ error: 'El usuario ya existe' });
+    }
 
-  const existingUser= await User.checkCedulaExists(cedula)
-
-if(existingUser){
-   return res.status(400).json({ error: 'El usuario ya existe' });
-}
-
-
-    const updateFields={}
-    // Preparar los campos a actualizar
+    const updateFields = {};
     if (name) updateFields.nombre = name;
     if (apellido) updateFields.apellido = apellido;
     if (cedula) updateFields.cedula = cedula;
     if (email) updateFields.email = email;
 
-
-     const result = await User.updateUser(id,updateFields);
-    
-     if (result) {
+    const result = await User.updateUser(id, updateFields);
+    if (!result) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
 
-    // Invalidar caché del usuario específico y del listado general
-    await redis.del(`user:${id}`);
-    await redis.del('users');
+   // await redis.del(`user:${id}`);
+   // await redis.del('users');
+   await cacheService.deleteFromCache(`user:${id}`);
+   await cacheService.deleteFromCache('users');
 
-      res.status(200).json({ message: 'Usuario actualizado exitosamente' });
-      
-   } catch (error) {
-      console.log(error)
 
-      return  res.status(500).json({ message: error.message });
+    res.status(200).json({ message: 'Usuario actualizado exitosamente' });
+  } catch (error) {
+   handleError(res,error)    
 
-   }
-   
-
+  }
 }
 
 
-//--------------------------------------------------------------------------
-
-
- static loginSupabase= async  (req, res) => {
- const  { email, password } = req.body;
-
- try {
-
-   const result= await User.loginSupabase(email,password)
-
-   if (result) {
-      res.status(200).json({ message: 'Inicio de sesión exitoso', session: result });
-
-   }
-   
- } catch (error) {
-   console.log(error)
-   return   res.status(500).json({ message: error.message });
-
-   
- }
- }
-
- //---------------------------------------------------------------------------------------
-
- static logoutSupabase = async (req, res) => {
-   try {
-       const { error } = await supabase.auth.signOut();
-
-       if (error) {
-           return res.status(400).json({ message: 'Error al cerrar sesión', error });
-       }
-
-       return res.status(200).json({ message: 'Sesión cerrada exitosamente' });
-   } catch (err) {
-       console.error(err);
-       return res.status(500).json({ message: 'Error interno del servidor', error: err.message });
-   }
-};
-
- //---------------------------------------------------------------------------------------
-
- static getSession = async (req,res)=>{
-   try {
-      const { data, error } = await supabase.auth.getSession();
-      if (error || !data.session) {
-        return res.status(401).json({ message: 'Sesión no válida o expirada' });
-      }
-
-   } catch (error) { 
-      console.log(error)
-      return res.status(500).json({ message: error.message });
-      
-   }
- }
-
-//-------------------------------------------------------------------------------
-
-static login =async(req,res)=>{
-   const {email,password}= req.body
-
-   try {
-
-      const user= await User.findByEmail(email)
-      console.log(user.contraseña)
-
-      if(!user){
-         return res.status(404).json({ message: 'Usuario no encontrado' });
-      }
-
-      const match= await compare(password,user.contraseña)
-
-      if (!match) {
-         return res.status(401).json({ message: 'Credenciales inválidas'})
-         
-      }
-
-      const token = tokenService.generateToken(user.id,user.email)
-
-      const code= randomBytes(8).toString('hex')
-
-   await User.insertLoginRecord(user.id,code)
-
-   res.status(200).json({
-      message:'inicio de sesion existoso',
-      token:token,
-   })
-      
-   } catch (error) {
-      console.log(error)
-      return res.status(500).json({message: error.message})
-      
-   }
-
-    
-}
 
 //----------------------------------------------------------------
  static getUserByCedula= async (req,res)=>{
@@ -349,17 +260,26 @@ static login =async(req,res)=>{
   }
 
   try {
-   const user= await User.getUserByCedula(cedula)
-   if(!user){
-      return res.status(404).json({ message: 'Usuario no encontrado' });
-      
-   }
 
+    const cacheKey = `user:cedula:${cedula}`
+
+ let user = await cacheService.getFromCache(cacheKey)
+ console.log('datos obtenidos desde redis')
+
+   if(!user){
+
+       user= await User.getUserByCedula(cedula)
+
+       if (!user) {
+         return res.status(404).json({ message: 'Usuario no encontrado' });
+     }    
+     await cacheService.setToCache(cacheKey, user);   
+   }
    res.status(200).json(user)
    
   } catch (error) {
-   console.log(error)
-   return res.status(500).json({message: error.message})
+   handleError(res,error)    
+
 
   }
 
@@ -394,8 +314,8 @@ static login =async(req,res)=>{
 
          
       } catch (error) {
-         console.log(error)
-         return res.status(500).json({message: error.message})
+         handleError(res,error)    
+
 
       }
 
@@ -413,8 +333,8 @@ static login =async(req,res)=>{
 
       
    } catch (error) {
-      console.log(error)
-      return res.status(500).json({message: error.message})
+      handleError(res,error)    
+
       
    }
  }
@@ -461,8 +381,8 @@ static searchUsers= async  (req,res)=>{
       res.status(200).json(users)
 
    }catch(error){
-      console.log(error)
-      return res.status(500).json({message: error.message})
+      handleError(res,error)    
+
    }
 
 
@@ -569,8 +489,8 @@ console.log(imagePath)
        }
 
    } catch (error) {
-       console.error('Error ejecutando la consulta:', error);
-       res.status(500).json({ error: 'Error interno del servidor' });
+      handleError(res,error)    
+
    }
 }
 
@@ -602,8 +522,8 @@ console.log(imagePath)
 
       res.status(200).json({message:'Usuarios eliminados exitosamente'})
    } catch (error) {
-      console.log(error)
-      return res.status(500).json({message: error.message})
+      handleError(res,error)    
+
       
    }
 
