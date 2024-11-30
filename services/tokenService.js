@@ -1,26 +1,27 @@
 import jwt from 'jsonwebtoken'
 
-const generateToken=(UserId,email,role)=>{
-   
-  // Generar un token JWT
-  const token = jwt.sign(
-    { id: UserId,email:email,rol:role},
-    process.env.JWT_SECRET, // Asegúrate de tener JWT_SECRET en tus variables de entorno
-    { expiresIn: '1h' } // Expiración del token, por ejemplo, 1 hora
-);
 
-return token;
+const generateToken = (userId,email)=>{
+    const token=  jwt.sign(
+     {   id:userId,email:email  },
+     process.env.JWT_SECRET,
+     {expiresIn: '1h'}
+        
+
+    )
+    return token
 }
 
-const verifyToken=(token)=>{
-     try{
 
-  const decode = jwt.verify(token, process.env.JWT_SECRET);
-  return decode.id; //Retorna el id del usuario 
-}catch(error){
-    return null  
-  }
+const verifyToken = (token) =>{
+    try{
+
+        const decode = jwt.verify(token, process.env.JWT_SECRET);
+        return decode.id; //Retorna el id del usuario 
+      }catch(error){
+          return null  
+        }
 
 }
 
-export default {generateToken,verifyToken }
+export default{generateToken,verifyToken}
