@@ -1,5 +1,6 @@
 import supabase from "../config/supabaseClient.js";
 import {hash,genSalt,compare} from 'bcrypt';
+import { v4 as uuidv4, v4 } from 'uuid';
 
 
 class  User {
