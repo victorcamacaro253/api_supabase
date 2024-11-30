@@ -6,12 +6,12 @@ import authRoutes from './authRoutes.js'
 
 const router = Router()
 
-router.use('/users',userRoutes)
+router.use('/v1/users',userRoutes)
 
-router.use('/products',productsRoutes)
+router.use('/v1/products',productsRoutes)
 
-router.use('/compras',comprasRoutes)
+router.use('/v1/compras',comprasRoutes)
 
-router.use('/auth',authRoutes)
+router.use('/v1/auth',authRoutes)
 
 export default router

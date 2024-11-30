@@ -11,7 +11,9 @@ const router= Router();
 router.get('/',userController.getUsers)
 
 
-  router.get('/dni',  
+
+
+  router.get('/v1/dni',  
     query('cedula').notEmpty().withMessage('La cedula es obligatorio'),
     userController.getUserByCedula)
 
@@ -29,10 +31,13 @@ router.get('/searchUser',[
 ],userController.searchUsers);
 
 
-  router.get('/loginHistory/:id',
-        param('id').isInt().withMessage('El id tiene que ser un numero entero'),
-        validarErrores, //midleware para manerjar errores
-        userController.getLoginHistory )
+router.get('/loginHistory/:id',
+  [
+    param('id').isInt().withMessage('El id tiene que ser un numero entero'),
+    validarErrores, //midleware para manerjar errores
+  ],
+  userController.getLoginHistory
+)
 
         
   router.get('/:id',
@@ -48,7 +53,7 @@ router.get('/searchUser',[
 
 
 
-router.post('/add',
+router.post('/',
     [body('name').notEmpty().withMessage('El nombre es obligatorio'),
     body('apellido').notEmpty().withMessage('El apellido es obligatorio'),
     body('email').isEmail().withMessage('El email no es valido'),
