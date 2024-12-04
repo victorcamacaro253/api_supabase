@@ -13,7 +13,7 @@ router.get('/',userController.getUsers)
 
 
 
-  router.get('/v1/dni',  
+  router.get('/dni',  
     query('cedula').notEmpty().withMessage('La cedula es obligatorio'),
     userController.getUserByCedula)
 

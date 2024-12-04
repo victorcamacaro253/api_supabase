@@ -11,6 +11,7 @@ router.get('/',comprasController.getCompras)
 //Ruta para obtener las compras de un usuario por su nombre
 router.get('/comprasUser/',comprasController.getComprasCountByUsuario)
 
+//Ruta para obtener las compras de un usuario por su id
 router.get('/user/:id',
     param('id').isInt().withMessage('El ID debe ser un numero entero'),
 comprasController.getComprasByUserId)
@@ -31,5 +32,12 @@ router.post('/',
         body('productos.*.precio').isFloat({gt:0}).withMessage('El precio debe ser un numero mayor a 0')
     ]
     ,comprasController.compraProduct)
+
+
+    router.delete('/:id',
+        param('id').isInt().withMessage('El id de la compra debe ser un numero entero')
+        ,comprasController.deleteCompra)
+
+
 
 export default router
