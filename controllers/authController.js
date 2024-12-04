@@ -65,8 +65,6 @@ const access_token = req.headers.authorization?.split(' ')[1];
 
 }
 
-
-
 static login =async(req,res)=>{
     const {email,password}= req.body
  
