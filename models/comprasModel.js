@@ -181,6 +181,65 @@ static async getComprasCountByUsuario() {
     return result;
 }
 
+ static async getProductosCompras(id_compra) {
+    // Realizar la consulta a la base de datos
+    const { data, error } = await supabase
+        .from('productos_compras') // Nombre de la tabla principal
+        .select(`
+            cantidad,
+            productos (
+               id_producto,
+                nombre_producto,
+                descripcion,
+                precio
+            ),
+            compras(
+            id_compra
+            )
+        `) // Seleccionar los campos deseados de productos
+        .eq('id_compra', id_compra); // Filtrar por id_compra
+
+    // Manejar errores
+    if (error) {
+        console.error('Error fetching productos:', error);
+        return null; // O manejar el error de otra manera
+    }
+
+    return data; // Retornar los resultados
+}
+
+
+ static async deleteProductoCompra(id){
+    // Realizar la consulta a la base de datos
+    const { data, error } = await supabase
+    .from('productos_compras')
+    .delete()
+    .eq('id_compra', id)
+    
+    if(error){
+        console.error('Error eliminando producto de la compra:', error);
+        throw new Error(error.message);
+    }
+    return data
+
+ }
+
+
+ static deleteCompra = async (id)=>{
+
+    const { data, error } = await supabase
+    .from('compras')
+    .delete()
+    .eq('id_compra', id);
+    if (error) {
+        console.error('Error eliminando la compra:', error);
+        throw new Error(error.message);
+    
+ }
+    
+        return data;
+ }
+
 }
 
 export default Compras
