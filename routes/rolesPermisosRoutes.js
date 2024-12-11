@@ -1,11 +1,18 @@
-import rolesPermisosController from "../controllers/rolesPermisosController.js";
 import { Router } from "express";
+import rolesPermisosController from "../controllers/rolesPermisosController.js";
+
 
 const router=  Router();
 
-router.get('/roles/', rolesPermisosController.getRoles);   
-router.get('/roles/rol',rolesPermisosController.getRoleByName) 
-router.get('roles/:id', rolesPermisosController.getRolesById);
+router.get('/',rolesPermisosController.getPermisosByRole)
+
+router.get('/roles/', rolesPermisosController.getRoles); 
+
+router.get('/roles/rol/',rolesPermisosController.getRoleByName) 
+
+router.get('/roles/:id', rolesPermisosController.getRolesById);
+
+
 
 router.post('/roles/', rolesPermisosController.createRole);
 router.put('roles/:id', rolesPermisosController.updateRole);
@@ -16,7 +23,6 @@ router.get('/permisos',rolesPermisosController.getPermisos)
 router.get('/permisos/permiso',rolesPermisosController.getPermisosByName)
 
 router.get('/permisos/:id',rolesPermisosController.getPermisosById)
-
 
 
 router.post('/permisos/', rolesPermisosController.createPermiso); // para crear un nuevo

@@ -8,8 +8,12 @@ const router = Router()
 //Ruta para obtener las compras 
 router.get('/',comprasController.getCompras)
 
-//Ruta para obtener las compras de un usuario por su nombre
+//Ruta para obtener las compras de los usuario por su nombre
 router.get('/comprasUser/',comprasController.getComprasCountByUsuario)
+
+//Ruta para obtener las compras de un usuario por su nombre
+router.get('/getUserCompras/',comprasController.getComprasByusername)
+
 
 //Ruta para obtener las compras de un usuario por su id
 router.get('/user/:id',

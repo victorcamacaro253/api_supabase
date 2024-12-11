@@ -31,6 +31,8 @@ router.get('/searchUser',[
 ],userController.searchUsers);
 
 
+
+
 router.get('/loginHistory/:id',
   [
     param('id').isInt().withMessage('El id tiene que ser un numero entero'),
@@ -63,6 +65,10 @@ router.post('/',
 router.delete('/:id',
 [param('id').isInt().withMessage('El ID debe ser un número entero')],
 userController.deleteUser)
+
+
+//Ruta para cambiar el estado del usuario
+router.put('/status/:id/:status',userController.changeStatus)
 
 router.put('/:id',
     [
