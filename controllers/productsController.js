@@ -5,6 +5,7 @@ import crypto from 'crypto'
 import { validationResult } from "express-validator";
 import fs from 'fs'
 import csvParser from 'csv-parser';
+import handleError from '../utils/handleError.js';
 
 
 
@@ -22,8 +23,7 @@ static getProducts = async (req,res)=>{
         res.json(products);
         
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Error obteniendo productos" });
+        handleError(res,error)
         
     }
 }
@@ -44,8 +44,7 @@ static getProductsById = async (req,res) =>{
         res.status(200).json(product)
 
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Error obteniendo producto por id" });
+       handleError(res,error)
         
     }
 
@@ -62,8 +61,7 @@ static getProductsById = async (req,res) =>{
                 }
                 res.status(200).json(product)
                 } catch (error) {
-                    console.error(error);
-                    res.status(500).json({ message: "Error obteniendo producto por nombre" });
+                   handleError(res,error)
                 }
 
 
@@ -106,8 +104,7 @@ static getProductsById = async (req,res) =>{
 
     
    } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Error creando producto" });
+    handleError(res,error)
 
     
    }
@@ -158,8 +155,7 @@ static getProductsById = async (req,res) =>{
 
 
                     } catch (error) {
-                        console.error(error);
-                        res.status(500).json({ message: "Error actualizando producto" });
+                       handleError(res,error)
                         }
                         }
 
@@ -176,8 +172,7 @@ static getProductsById = async (req,res) =>{
                                     const newProduct = await productsModel.deleteProduct(id)
                                     res.status(200).json({message:'Producto eliminado exitosamente'})
                                     } catch (error) {
-                                        console.error(error);
-                                        res.status(500).json({ message: "Error eliminando producto" });
+                                      handleError(res,error)
                                         }
                              }
 
@@ -194,8 +189,7 @@ static getProductsById = async (req,res) =>{
             }
             res.status(200).json(products)
             }catch(error){
-                console.error(error);
-                res.status(500).json({message: "Error obteniendo productos por rango de precio"});
+               handleError(res,error)
                   
                }
 
@@ -211,8 +205,7 @@ static getProductsById = async (req,res) =>{
             const products = await productsModel.getProductsByCategory(category)
             res.status(200).json(products)
             }catch(error){
-                console.error(error);
-                res.status(500).json({message: "Error obteniendo productos por categoria"});
+               handleError(res,error)
                 }
                 }
 
@@ -305,8 +298,7 @@ try {
     }
           
 } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Error al crear el producto' });
+    handleError(res,error)
     
 }
 
@@ -320,8 +312,7 @@ try {
         const results= await productsModel.getTopSellingProducts();
         res.json(results)
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Error al obtener los productos más vendidos'})
+      handleError(res,error)
         
     }
   }
@@ -372,12 +363,10 @@ try {
 
 
     } catch (error) {
-        console.log('Error al procesar el archivo  o importar prodcutos',error)
-
         if(fs.existsSync(filePath)){
             fs.unlinkSync(filePath)
         }
-        return  res.status(500).json({message:'Error al importar productos',error})
+        handleError(res,error)
 
     }
 
@@ -400,10 +389,7 @@ console.log(stock)
 
         return res.json(stock)
         } catch (error) {
-            console.log(error)
-            return res.status(500).json({message:'Error al obtener el stock del producto',error
-              
-            })
+            handleError(res,error)
             
         }
         

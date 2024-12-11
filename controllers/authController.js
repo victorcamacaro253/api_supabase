@@ -26,33 +26,33 @@ class authController {
 
 static handleCallback = async (req, res) => {
     try {
-// Obtén el token del header Authorization
-const access_token = req.headers.authorization?.split(' ')[1];
+  // Obtén el token del header Authorization
+       const access_token = req.headers.authorization?.split(' ')[1];
         if (!access_token) {
             return res.status(400).json({ message: 'Token no proporcionado' });
         }
-//console.log('token',access_token)
-        // Validar el token y obtener datos del usuario
-        const { data: user, error } = await supabase.auth.getUser(access_token);
-       // console.log('user',user)
-        if (error) {
-            throw new Error(error.message);
-        }
+          //console.log('token',access_token)
+         // Validar el token y obtener datos del usuario
+         const { data: user, error } = await supabase.auth.getUser(access_token);
+        // console.log('user',user)
+         if (error) {
+             throw new Error(error.message);
+           }
 
         const { email } = user.user;
 
         const verifyExists = await userModel.findByEmail(email)
-        if (verifyExists) {
-            return res.status(400).json({ message: 'El usuario ya existe' });
-            }
+         if (verifyExists) {
+             return res.status(400).json({ message: 'El usuario ya existe' });
+              }
 
-         // Guardar usuario en la base de datos
-         const savedUser = await authModel.saveUserToDatabase(user);
+          // Guardar usuario en la base de datos
+          const savedUser = await authModel.saveUserToDatabase(user);
 
-        // Opcional: Guardar usuario en la base de datos
-        // saveUserToDatabase(user);
+         // Opcional: Guardar usuario en la base de datos
+         // saveUserToDatabase(user);
 
-        return res.status(200).json({
+          return res.status(200).json({
             message: 'Autenticación completada con éxito',
             user,
             tokens: { access_token, refresh_token, expires_at },

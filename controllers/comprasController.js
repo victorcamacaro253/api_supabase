@@ -290,5 +290,72 @@ try {
 }
  }   
 
+
+
+ static getComprasByusername= async (req,res)=>{
+
+    const {nombre}=req.query
+
+    console.log(nombre)
+
+    if (!nombre) {
+      
+      return res.status(400).json({ error: 'No se proporciono un nombre' });
+     
+    }
+   
+    try {
+      
+const result = await Compras.getComprasByUsername(nombre)
+
+ // Imprimir el resultado completo para depuración
+ console.log(JSON.stringify(result, null, 2)); // Esto mostrará el contenido completo
+
+ if(!result){
+  return    res.status(400).json({error:'No se proporciono'})
+ }
+
+  // Procesar los resultados
+  const compraAgrupada = {};
+
+  result.forEach(row => {
+    if (!compraAgrupada[row.id_compra]) {
+      compraAgrupada[row.id_compra] = {
+        id_compra: row.id_compra,
+        fecha: row.fecha,
+        usuario: {
+          id: row.id_usuario,
+          nombre: row.nombre,
+          apellido: row.apellido,
+          cedula: row.cedula,
+          correo: row.correo,
+        },
+        productos: []
+      };
+    }
+
+  
+        // Agregar el producto a la compra
+        row.productos_compras.forEach(producto => {
+            compraAgrupada[row.id_compra].productos.push({
+                id_producto: producto.id_producto,
+                nombre_producto:producto.productos.nombre_producto,
+                cantidad: producto.cantidad,
+                precio: producto.precio
+            });
+        });
+    });
+
+  return res.json(Object.values(compraAgrupada));
+
+
+    } catch (error) {
+      console.error('Error obteniendo compras por el nombre del usuario', error);
+      res.status(500).json({ error: 'Error interno del servidor' });
+    }
+
+    }
+
+
 }
 export default comprasController 

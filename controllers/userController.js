@@ -15,25 +15,27 @@ class userController {
 
 static getUsers = async (req,res)=>{
  try {
- const cachedUsers = await cacheService.getFromCache('users')
+    const cachedUsers = await cacheService.getFromCache('supabaseUsers')
  //const cachedUsers= await redis.get('users')
-  if (cachedUsers) {
-   console.log('Usarios obtenidos mediante redis')
-notificationService.notify('Hola victor')
- return  res.json(cachedUsers)
-  }
+       if (cachedUsers) {
+         console.log('Usarios obtenidos mediante redis')
+           notificationService.notify('Hola victor')
+    
+            return  res.json(cachedUsers)
+          }
 
 
     const result= await User.getUsers();
-console.log('usuarios obtenidos por supabase')
+      console.log('usuarios obtenidos por supabase')
 
-//await redis.set('users',JSON.stringify(result),'EX',600)
+       //await redis.set('users',JSON.stringify(result),'EX',600)
 
-await cacheService.setToCache('users',result)
+       await cacheService.setToCache('supabaseUsers',result)
 
-    res.status(200).json(result) 
- } catch (error) {
-   handleError(res,error)    
+        res.status(200).json(result) 
+
+     } catch (error) {
+        handleError(res,error)    
     
  }
 
@@ -55,7 +57,7 @@ console.log('victor',id)
   }
    try {
 
-      const cachedUser = await cacheService.getFromCache(`user:${id}`);
+      const cachedUser = await cacheService.getFromCache(`supabaseUser:${id}`);
 
      // const cachedUser= await redis.get(`user:${id}`);
 
@@ -76,7 +78,7 @@ console.log('victor',id)
 
       // await redis.set(`user:${id}`,JSON.stringify(result),'EX',600);
 
-      await cacheService.setToCache(`user:${id}`, result);
+      await cacheService.setToCache(`supabaseUser:${id}`, result);
 
 
       res.status(200).json(result)
@@ -96,7 +98,7 @@ static getUserByName= async(req,res)=>{
    try {
 
    // const cachedUser = await redis.get(`user:name${name}`);
-   const cachedUser = await cacheService.getFromCache(`user:name:${name}`);
+   const cachedUser = await cacheService.getFromCache(`supabaseUser:name:${name}`);
 
 
     if(cachedUser){
@@ -113,7 +115,7 @@ static getUserByName= async(req,res)=>{
       console.log(`Dato obtenido de redis`)
 
      // await redis.set(`user:name:${name}`,JSON.stringify(result),'EX',600)
-     await cacheService.setToCache(`user:name:${name}`, result);
+     await cacheService.setToCache(`supabaseUser:name:${name}`, result);
 
      console.log(`Usuario ${name} guardado en cache`)
 
@@ -159,9 +161,7 @@ if(existingUser){
 
     // Eliminar el caché global de usuarios para que se recargue con la lista actualizada.
    // await redis.del('users');
-   await cacheService.deleteFromCache('users');
-
-
+   await cacheService.deleteFromCache('supabaseUsers');
 
    return res.status(201).json('usuario creado exitosamente')
    
@@ -192,8 +192,8 @@ static deleteUser  = async (req, res) => {
      // Eliminar el caché global y el específico del usuario eliminado.
     // await redis.del(`user:${id}`);
     // await redis.del('users');
-    await cacheService.deleteFromCache(`user:${id}`);
-    await cacheService.deleteFromCache('users');
+    await cacheService.deleteFromCache(`supabaseUser:${id}`);
+    await cacheService.deleteFromCache('supabaseUsers');
 
  
 
@@ -235,8 +235,8 @@ static updateUser = async (req, res) => {
 
    // await redis.del(`user:${id}`);
    // await redis.del('users');
-   await cacheService.deleteFromCache(`user:${id}`);
-   await cacheService.deleteFromCache('users');
+   await cacheService.deleteFromCache(`supabaseUser:${id}`);
+   await cacheService.deleteFromCache('supabaseUsers');
 
 
     res.status(200).json({ message: 'Usuario actualizado exitosamente' });
@@ -261,7 +261,7 @@ static updateUser = async (req, res) => {
 
   try {
 
-    const cacheKey = `user:cedula:${cedula}`
+    const cacheKey = `supabaseUser:cedula:${cedula}`
 
  let user = await cacheService.getFromCache(cacheKey)
  console.log('datos obtenidos desde redis')
@@ -324,7 +324,11 @@ static updateUser = async (req, res) => {
 
 //-----------------------------------------------------------------------------------------------
  static getUsersWithPagination = async (req,res)=>{
-   const{ page=1,limit=10}= req.query
+   let { page=1,limit=10}= req.query
+
+   page= parseInt(page,10)
+   limit= parseInt(limit,10)
+
    const offset= (page-1) * limit;
 
    try {
@@ -529,6 +533,41 @@ console.log(imagePath)
 
  }
 
+
+ //--------------------------------------------------------------------------------------------------
+   
+
+   static changeStatus = async (req, res) => {
+      const { id,status } = req.params;
+   console.log(id,status)
+      try {
+         const user = await User.getUserStatus(id);
+         if (!user) {
+            return res.status(404).json({ message: 'Usuario no encontrado' });
+         }
+
+         // Verifica el estado actual del usuario
+         if (user.status === 'activo' && status === 'activo') {
+            return res.status(400).json({ message: 'El usuario ya está activo' });
+         }
+
+         // Cambia el estado solo si el usuario está inactivo
+         if (user.status === 'inactivo' && status === 'activo') {
+            const update = await User.changeStatus('activo', id);
+           
+            return res.json({ message: 'Se ha cambiado el estatus a activo',update });
+         }
+
+         // Si el estado es inválido, se cambia a inválido
+         const update = await User.changeStatus('inactivo', id);
+       
+
+         res.json({ message: 'Se ha cambiado el estatus exitosamente' ,update});
+
+      } catch (error) {
+         handleError(res,error)    
+      }
+   }
 
 }
 
