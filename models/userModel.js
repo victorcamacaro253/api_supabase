@@ -237,6 +237,34 @@ static addMultipleUsers= async (users)=>{
     
 }
 
+ static changeStatus = async (status,id)=>{
+   const {data,error}= await supabase
+   .from('usuarios')
+   .update({status})
+   .eq('id',id)
+   if(error){
+    console.error('Error updating status:', error);
+    return null; // O lanza un error si prefieres
+   }
+   return data
+ }
+
+ 
+static getUserStatus=async(id)=> {
+    const { data, error } = await supabase
+        .from('usuarios')
+        .select('status')
+        .eq('id', id)
+        .single(); // .single() para obtener un solo registro
+
+    if (error) {
+        console.error('Error fetching user status:', error);
+        return null; // O maneja el error de la manera que prefieras
+    }
+
+    return data; // Devuelve el objeto que contiene el estatus
+}
+
 }
 
 

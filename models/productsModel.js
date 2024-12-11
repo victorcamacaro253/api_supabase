@@ -1,7 +1,7 @@
 import supabase from "../config/supabaseClient.js";
 
 
-class Product {
+class Products {
 
 
  static getProducts = async  () => {
@@ -310,4 +310,4 @@ static updateProductStock = async (id, stock)=>{
 }
 
 
-export default  Product;
+export default  Products;
